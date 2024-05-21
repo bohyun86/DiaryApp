@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">DiaryApp</string>
+    <string name="diary">Diary</string>
+    <string name="id_ko">아이디</string>
+    <string name="pw_ko">비밀번호</string>
+    <string name="userEnroll">사용자등록</string>
+    <string name="pwInitialize">비밀번호 초기화</string>
+</resources>
