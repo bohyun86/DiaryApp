@@ -51,6 +51,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.diaryapp.ui.theme.DiaryAppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DiaryAppTheme {
+                val navController = rememberNavController()
                 val context = LocalContext.current
                 val userDao = AppDatabase.getDatabase(context).userDao()
                 val contentDao = AppDatabase.getDatabase(context).contentDao()
@@ -75,7 +80,27 @@ class MainActivity : ComponentActivity() {
                     factory = UserRegisterViewModelFactory(userRepository)
                 )
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen(Modifier.padding(innerPadding), userRegisterViewModel)
+                    NavHost(
+                        navController = navController,
+                        startDestination = "main_screen",
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        composable("main_screen") {
+                            MainScreen(navController, userRegisterViewModel)
+                        }
+                        composable("write_diary_screen") {
+                            WriteDiaryScreen(diaryViewModel)
+                        }
+                        composable("diary_screen") {
+                            DiaryScreen()
+                        }
+                        composable("user_register_screen") {
+                            UserRegisterScreen(navController, userRegisterViewModel, diaryViewModel)
+                        }
+                        composable("password_reset_screen") {
+                            PasswordResetScreen(navController, userRegisterViewModel)
+                        }
+                    }
                 }
             }
         }
@@ -83,14 +108,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(modifier: Modifier,
-               userRegisterViewModel: UserRegisterViewModel) {
-
+fun MainScreen(
+    navController: NavHostController,
+    userRegisterViewModel: UserRegisterViewModel
+) {
     val id = userRegisterViewModel.id
     val pw = userRegisterViewModel.pw
 
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(150.dp))
@@ -101,31 +127,35 @@ fun MainScreen(modifier: Modifier,
         )
         Spacer(modifier = Modifier.height(100.dp))
         TextFieldSample1(stringResource(R.string.id_ko), id) {
-            userRegisterViewModel.id
+            userRegisterViewModel.onIdChange(it)
         }
         TextFieldSample1(stringResource(R.string.pw_ko), pw) {
-            userRegisterViewModel.pw
+            userRegisterViewModel.onPwChange(it)
         }
         ButtonSample1(name = "로그인") {
-            if (id.isEmpty() || pw.isEmpty()) {
-                return@ButtonSample1
+            if (id.isNotEmpty() && pw.isNotEmpty()) {
+                navController.navigate("diary_screen")
             }
         }
         Spacer(modifier = Modifier.height(10.dp))
-        ButtonSample2(name = stringResource(R.string.userEnroll))
-        ButtonSample2(name = stringResource(R.string.pwInitialize))
+        ButtonSample2(name = stringResource(R.string.userEnroll)) {
+            navController.navigate("user_register_screen")
+        }
+        ButtonSample2(name = stringResource(R.string.pwInitialize)) {
+            navController.navigate("password_reset_screen")
+        }
     }
 }
 
 @Composable
-fun PasswordResetScreen(userRegisterViewModel: UserRegisterViewModel) {
+fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel: UserRegisterViewModel) {
     val pw = userRegisterViewModel.pw
     val pw2 = userRegisterViewModel.pw2
     val email = userRegisterViewModel.email
     val isValid = remember { mutableStateOf(true) }
 
     Column(modifier = Modifier.padding(16.dp)) {
-    Row(
+        Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
@@ -134,7 +164,7 @@ fun PasswordResetScreen(userRegisterViewModel: UserRegisterViewModel) {
             Icon(painter = painterResource(R.drawable.baseline_arrow_back_24),
                 contentDescription = "back",
                 modifier = Modifier
-                    .clickable { /*TODO*/ }
+                    .clickable { navController.navigateUp() }
                     .padding(end = 32.dp)
                     .size(32.dp)
             )
@@ -146,21 +176,22 @@ fun PasswordResetScreen(userRegisterViewModel: UserRegisterViewModel) {
         )
         {
             TextFieldSample1("이메일 주소", email, "(등록하신 이메일 주소를 입력해주세요.)") {
-                userRegisterViewModel.email
+                userRegisterViewModel.onEmailChange(it)
             }
             ButtonSample1(name = "확인") {
                 isValid.value = userRegisterViewModel.isExitingUserEmail(email)
             }
-            Text(userRegisterViewModel.errorMessage,
+            Text(
+                userRegisterViewModel.errorMessage,
                 fontSize = 20.sp,
                 color = Color.Red,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(10.dp))
+                    .padding(10.dp)
+            )
         }
 
         Spacer(modifier = Modifier.padding(vertical = 20.dp))
-
 
         if (isValid.value) {
             Row(
@@ -176,22 +207,89 @@ fun PasswordResetScreen(userRegisterViewModel: UserRegisterViewModel) {
                 modifier = Modifier.fillMaxWidth()
             )
             {
-                TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#\$ 및 영문숫자)") {
-                    userRegisterViewModel.pw
+                TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") {
+                    userRegisterViewModel.onPwChange(it)
                 }
-                TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#\$ 및 영문숫자)") {
-                    userRegisterViewModel.pw2
+                TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") {
+                    userRegisterViewModel.onPw2Change(it)
                 }
                 ButtonSample1(name = "확인") {
                     userRegisterViewModel.updateUser()
+                    navController.navigate("Main_screen")
                 }
-                Text(userRegisterViewModel.errorMessage,
+                Text(
+                    userRegisterViewModel.errorMessage,
                     fontSize = 20.sp,
                     color = Color.Red,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(10.dp))
+                        .padding(10.dp)
+                )
             }
+        }
+    }
+}
+
+
+@Composable
+fun UserRegisterScreen(
+    navController: NavHostController,
+    userRegisterViewModel: UserRegisterViewModel,
+    diaryViewModel: DiaryViewModel
+) {
+    val id = userRegisterViewModel.id
+    val pw = userRegisterViewModel.pw
+    val pw2 = userRegisterViewModel.pw2
+    val email = userRegisterViewModel.email
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ScreenTitle(title = "사용자 등록")
+            Icon(
+                painter = painterResource(R.drawable.baseline_arrow_back_24),
+                contentDescription = "back",
+                modifier = Modifier
+                    .clickable { navController.navigateUp() }
+                    .padding(end = 32.dp)
+                    .size(32.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 150.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            TextFieldSample1(stringResource(R.string.id_ko), id, "(길이 8~15자,  !@#$ 및 영문숫자)") { newId ->
+                userRegisterViewModel.onIdChange(newId)
+            }
+            TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw ->
+                userRegisterViewModel.onPwChange(newPw)
+            }
+            TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
+                userRegisterViewModel.onPw2Change(newPw2)
+            }
+            TextFieldSample1("이메일 주소", email) { newEmail ->
+                userRegisterViewModel.onEmailChange(newEmail)
+            }
+            ButtonSample1(name = "사용자 등록") {
+                if (userRegisterViewModel.registerUser()) {
+                    navController.navigate("diary_screen")
+                }
+            }
+            Text(
+                userRegisterViewModel.errorMessage,
+                fontSize = 20.sp,
+                color = Color.Red,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(10.dp)
+            )
         }
     }
 }
@@ -227,6 +325,7 @@ fun TextFieldSample1(
     )
 }
 
+
 @Composable
 fun ButtonSample1(name: String, onClick: () -> Unit) {
     Button(
@@ -244,14 +343,14 @@ fun ButtonSample1(name: String, onClick: () -> Unit) {
     }
 }
 
+
 @Composable
-fun ButtonSample2(name: String) {
+fun ButtonSample2(name: String, onClick: () -> Unit) {
     TextButton(
-        onClick = { /*TODO*/ },
+        onClick = onClick,
         modifier = Modifier
             .size(width = 280.dp, height = 50.dp)
-    )
-    {
+    ) {
         Text(
             text = name,
             fontSize = 20.sp,
@@ -260,64 +359,6 @@ fun ButtonSample2(name: String) {
     }
 }
 
-@Composable
-fun UserRegisterScreen(
-    userRegisterViewModel: UserRegisterViewModel,
-    diaryViewModel: DiaryViewModel
-) {
-
-    val id = userRegisterViewModel.id
-    val pw = userRegisterViewModel.pw
-    val pw2 = userRegisterViewModel.pw2
-    val email = userRegisterViewModel.email
-
-    Column(modifier = Modifier.padding(16.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ScreenTitle(title = "사용자 등록")
-            Icon(
-                painter = painterResource(R.drawable.baseline_arrow_back_24),
-                contentDescription = "back",
-                modifier = Modifier
-                    .clickable { }
-                    .padding(end = 32.dp)
-                    .size(32.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 150.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TextFieldSample1(stringResource(R.string.id_ko), id, "(길이 8~15자,  !@#$ 및 영문숫자)") { newId ->
-                userRegisterViewModel.onIdChange(newId)
-            }
-            TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw ->
-                userRegisterViewModel.onPwChange(newPw)
-            }
-            TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
-                userRegisterViewModel.onPw2Change(newPw2)
-            }
-            TextFieldSample1("이메일 주소", email) { newEmail ->
-                userRegisterViewModel.onEmailChange(newEmail)
-            }
-            ButtonSample1(name = "사용자 등록") {
-                userRegisterViewModel.registerUser()
-            }
-            Text(userRegisterViewModel.errorMessage,
-                fontSize = 20.sp,
-                color = Color.Red,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(10.dp))
-        }
-    }
-}
 
 data class SampleData(
     val contentId: Int,
@@ -538,6 +579,7 @@ fun WriteDiaryScreen(viewModel: DiaryViewModel) {
 @Composable
 fun MainScreenPreview() {
     DiaryAppTheme {
+        val navController = rememberNavController()
         val context = LocalContext.current
         val userDao = AppDatabase.getDatabase(context).userDao()
         val contentDao = AppDatabase.getDatabase(context).contentDao()
@@ -550,7 +592,27 @@ fun MainScreenPreview() {
             factory = UserRegisterViewModelFactory(userRepository)
         )
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            MainScreen(Modifier.padding(innerPadding), userRegisterViewModel)
+            NavHost(
+                navController = navController,
+                startDestination = "main_screen",
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable("main_screen") {
+                    MainScreen(navController, userRegisterViewModel)
+                }
+                composable("write_diary_screen") {
+                    WriteDiaryScreen(diaryViewModel)
+                }
+                composable("diary_screen") {
+                    DiaryScreen()
+                }
+                composable("user_register_screen") {
+                    UserRegisterScreen(navController, userRegisterViewModel, diaryViewModel)
+                }
+                composable("password_reset_screen") {
+                    PasswordResetScreen(navController, userRegisterViewModel)
+                }
+            }
         }
     }
 }

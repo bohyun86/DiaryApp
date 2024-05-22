@@ -57,32 +57,34 @@ class UserRegisterViewModel(
         }
         return isTrue
     }
-    fun registerUser() {
-        if (pwEqualPw2() || validateId() || validatePw() || validateEmail()) {
+    fun registerUser(): Boolean {
+        return if (pwEqualPw2() && validateId() && validatePw() && validateEmail()) {
 
             viewModelScope.launch {
                 userRepository.insertUser(currentUser)
             }
+            true
 
         } else {
             when {
-                validateId() -> errorMessage += "아이디는 8자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
-                validatePw() -> errorMessage += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
-                pwEqualPw2() -> errorMessage += "비밀번호가 일치하지 않습니다.\n"
-                validateEmail() -> errorMessage += "이메일 형식이 올바르지 않습니다.\n"
+                !validateId() -> errorMessage += "아이디는 8자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !validatePw() -> errorMessage += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !pwEqualPw2() -> errorMessage += "비밀번호가 일치하지 않습니다.\n"
+                !validateEmail() -> errorMessage += "이메일 형식이 올바르지 않습니다.\n"
             }
+            false
         }
     }
 
     fun updateUser() {
-        if (pwEqualPw2() || validatePw() ) {
+        if (pwEqualPw2() && validatePw() ) {
             viewModelScope.launch {
                 userRepository.updateUser(currentUser)
             }
         } else {
             when {
-                validatePw() -> errorMessage += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
-                pwEqualPw2() -> errorMessage += "비밀번호가 일치하지 않습니다.\n"
+                !validatePw() -> errorMessage += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !pwEqualPw2() -> errorMessage += "비밀번호가 일치하지 않습니다.\n"
             }
         }
     }
