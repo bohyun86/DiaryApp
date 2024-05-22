@@ -1,7 +1,5 @@
 package com.example.diaryapp
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -54,3 +52,4 @@ class DiaryViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
