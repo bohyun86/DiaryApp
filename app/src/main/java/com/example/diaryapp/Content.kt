@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
     )]
 )
 data class Content(
-    @PrimaryKey @ColumnInfo(name = "contentId") val contentId: String,
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "contentId") val contentId: Int,
     @ColumnInfo(name = "date") val contentDate: String,
     @ColumnInfo(name = "contentDetail") val contentDetail: String,
     @ColumnInfo(name = "userId") val userId: String

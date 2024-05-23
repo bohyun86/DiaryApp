@@ -3,53 +3,48 @@ package com.example.diaryapp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class DiaryViewModel(
-    private val userRepository: UserRepository,
     private val contentRepository: ContentRepository
 ) : ViewModel() {
+    private val _contents = MutableStateFlow<List<Content>>(emptyList())
+    val contents: StateFlow<List<Content>> get() = _contents
 
-
-    var currentUserId: String = "defaultUserId" // 실제로는 로그인한 사용자 ID를 설정
-
-    fun insertUser(userId: String, userPw: String, userEmail: String) {
-        val user = User(userId, userPw, userEmail)
+    fun getContentsByUserId(userId: String) {
         viewModelScope.launch {
-            userRepository.insertUser(user)
+            val data = contentRepository.getContentsByUserId(userId)
+            _contents.value = data
         }
     }
 
-    fun insertContent(contentDetail: String) {
-        val contentId = System.currentTimeMillis().toString()
-        val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        val content = Content(contentId, currentDate, contentDetail, currentUserId)
+    fun insertContent(contentDetail: String, userId: String) {
         viewModelScope.launch {
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val content = Content(
+                contentId = 0,
+                contentDate = LocalDate.now().format(formatter),
+                contentDetail = contentDetail,
+                userId = userId
+            )
             contentRepository.insertContent(content)
-        }
-    }
-
-    fun getContentsByUserId(userId: String, onResult: (List<Content>) -> Unit) {
-        viewModelScope.launch {
-            val contents = contentRepository.getContentsByUserId(userId)
-            onResult(contents)
+            getContentsByUserId(userId)
         }
     }
 }
 
 class DiaryViewModelFactory(
-    private val userRepository: UserRepository,
     private val contentRepository: ContentRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DiaryViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DiaryViewModel(userRepository, contentRepository) as T
+            return DiaryViewModel(contentRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

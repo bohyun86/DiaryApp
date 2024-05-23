@@ -32,15 +32,14 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -67,7 +66,6 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -75,12 +73,12 @@ class MainActivity : ComponentActivity() {
             DiaryAppTheme {
                 val navController = rememberNavController()
                 val context = LocalContext.current
-                val userDao = AppDatabase.getDatabase(context).userDao()
-                val contentDao = AppDatabase.getDatabase(context).contentDao()
-                val userRepository = UserRepository(userDao)
-                val contentRepository = ContentRepository(contentDao)
+                val userDao = remember { AppDatabase.getDatabase(context).userDao() }
+                val contentDao = remember { AppDatabase.getDatabase(context).contentDao() }
+                val userRepository = remember { UserRepository(userDao) }
+                val contentRepository = remember { ContentRepository(contentDao) }
                 val diaryViewModel: DiaryViewModel = viewModel(
-                    factory = DiaryViewModelFactory(userRepository, contentRepository)
+                    factory = DiaryViewModelFactory(contentRepository)
                 )
                 val userRegisterViewModel: UserRegisterViewModel = viewModel(
                     factory = UserRegisterViewModelFactory(userRepository)
@@ -95,10 +93,10 @@ class MainActivity : ComponentActivity() {
                             MainScreen(navController, userRegisterViewModel)
                         }
                         composable("write_diary_screen") {
-                            WriteDiaryScreen(diaryViewModel)
+                            WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
                         }
                         composable("diary_screen") {
-                            DiaryScreen()
+                            DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
                         }
                         composable("user_register_screen") {
                             UserRegisterScreen(navController, userRegisterViewModel)
@@ -139,10 +137,13 @@ fun MainScreen(
             userRegisterViewModel.onPwChange(it)
         }
         ButtonSample1(name = "로그인") {
-            if (id.isNotEmpty() && pw.isNotEmpty()) {
-                navController.navigate("diary_screen")
+            userRegisterViewModel.login(id, pw) { success ->
+                if (success) {
+                    navController.navigate("diary_screen")
+                }
             }
         }
+
         Spacer(modifier = Modifier.height(10.dp))
         ButtonSample2(name = stringResource(R.string.userEnroll)) {
             navController.navigate("user_register_screen")
@@ -150,6 +151,14 @@ fun MainScreen(
         ButtonSample2(name = stringResource(R.string.pwInitialize)) {
             navController.navigate("password_reset_screen")
         }
+        Text(
+            userRegisterViewModel.errorMessage,
+            fontSize = 16.sp,
+            color = Color.Red,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 10.dp, start = 60.dp, end = 60.dp)
+        )
     }
 }
 
@@ -170,7 +179,8 @@ fun PasswordResetScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             ScreenTitle("비밀번호 초기화")
-            Icon(painter = painterResource(R.drawable.baseline_arrow_back_24),
+            Icon(
+                painter = painterResource(R.drawable.baseline_arrow_back_24),
                 contentDescription = "back",
                 modifier = Modifier
                     .clickable { navController.navigateUp() }
@@ -182,13 +192,14 @@ fun PasswordResetScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
-        )
-        {
+        ) {
             TextFieldSample1("이메일 주소", email, "(등록하신 이메일 주소를 입력해주세요.)") {
                 userRegisterViewModel.onEmailChange(it)
             }
             ButtonSample1(name = "확인") {
-                isValid.value = userRegisterViewModel.isExitingUserEmail(email)
+                userRegisterViewModel.isExitingUserEmail(email) { result ->
+                    isValid.value = result
+                }
             }
             Text(
                 userRegisterViewModel.errorMessage,
@@ -214,17 +225,23 @@ fun PasswordResetScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
-            )
-            {
-                AsteriskPasswordTextField(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") {
+            ) {
+                AsteriskPasswordTextField(
+                    stringResource(R.string.pw_ko),
+                    pw,
+                    "(길이 6~15자,  !@#$ 및 영문숫자)"
+                ) {
                     userRegisterViewModel.onPwChange(it)
                 }
                 AsteriskPasswordTextField("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") {
                     userRegisterViewModel.onPw2Change(it)
                 }
                 ButtonSample1(name = "확인") {
-                    userRegisterViewModel.updateUser()
-                    navController.navigate("Main_screen")
+                    userRegisterViewModel.updateUser {
+                        if (it) {
+                            navController.navigate("main_screen")
+                        }
+                    }
                 }
                 Text(
                     userRegisterViewModel.errorMessage,
@@ -294,8 +311,10 @@ fun UserRegisterScreen(
                 userRegisterViewModel.onEmailChange(newEmail)
             }
             ButtonSample1(name = "사용자 등록") {
-                if (userRegisterViewModel.registerUser()) {
-                    navController.navigate("diary_screen")
+                userRegisterViewModel.registerUser{
+                    if (it) {
+                        navController.navigate("Main_screen")
+                    }
                 }
             }
             Text(
@@ -429,40 +448,27 @@ fun ButtonSample2(name: String, onClick: () -> Unit) {
 }
 
 
-data class SampleData(
-    val contentId: Int,
-    val date: String,
-    val contentDetail: String,
-    val userId: String
-)
-
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DiaryScreen() {
-    val contentList = remember {
-        mutableListOf(
-            SampleData(1, "2024-04-01", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(2, "2024-04-04", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(3, "2024-04-05", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp1"),
-            SampleData(4, "2024-04-23", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(5, "2024-04-25", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(6, "2024-05-01", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp1"),
-            SampleData(7, "2024-05-05", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(8, "2024-05-08", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(9, "2024-05-09", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(10, "2024-05-01", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp1"),
-            SampleData(11, "2024-05-05", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(12, "2024-05-08", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(13, "2024-05-09", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(11, "2024-05-05", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(12, "2024-05-08", "소고기를 먹고 회도 먹고 맛있는거", "qhgusdlsp"),
-            SampleData(13, "2024-05-09", "소고기를 먹고 회도 먹고 맛있는거 많이 먹어서 너무너무", "qhgusdlsp")
-        )
+fun DiaryScreen(
+    navController: NavHostController,
+    userRegisterViewModel: UserRegisterViewModel,
+    diaryViewModel: DiaryViewModel
+) {
+    val userId = remember { userRegisterViewModel.id }
+
+    var contents by remember { mutableStateOf(emptyList<Content>()) }
+
+    // Load contents when the screen is first composed
+    LaunchedEffect(Unit) {
+        diaryViewModel.getContentsByUserId(userId)
+        diaryViewModel.contents.collect { newContents ->
+            contents = newContents
+        }
     }
 
-    val filteredList = contentList.filter { it.userId == "qhgusdlsp" }.reversed()
-    val groupedByMonth = filteredList.groupBy { it.date.substring(0, 7) }
+    val filteredList = contents.filter { it.userId == userId }.reversed()
+    val groupedByMonth = filteredList.groupBy { it.contentDate.substring(0, 7) }
 
     Column {
         LazyColumn(
@@ -474,7 +480,6 @@ fun DiaryScreen() {
                 .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
                 .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
-
         ) {
             groupedByMonth.forEach { (month, entries) ->
                 stickyHeader {
@@ -482,15 +487,14 @@ fun DiaryScreen() {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(color = MaterialTheme.colorScheme.primary)
-                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(8.dp)
                     ) {
                         Text(
                             text = "${month.substring(0, 4)}년 ${month.substring(5, 7)}월",
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(8.dp)
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -499,11 +503,11 @@ fun DiaryScreen() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
+                                .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${entry.date.substring(8, 10)}일",
+                                text = "${entry.contentDate.substring(8, 10)}일",
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
@@ -514,10 +518,10 @@ fun DiaryScreen() {
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
                         }
-                        // Divider 추가
                         if (index < entries.size - 1) {
                             Divider(
-                                color = Color.Gray, thickness = 1.dp,
+                                color = Color.Gray,
+                                thickness = 1.dp,
                                 modifier = Modifier.padding(start = 57.dp, end = 16.dp)
                             )
                         }
@@ -532,14 +536,15 @@ fun DiaryScreen() {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(painter = painterResource(id = R.drawable.baseline_add_circle_24),
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_add_circle_24),
                     contentDescription = "addContent",
                     modifier = Modifier
-                        .clickable { }
+                        .clickable { navController.navigate("write_diary_screen") }
                         .size(48.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-                TextButton(onClick = { /*TODO*/ }) {
+                TextButton(onClick = { navController.navigate("write_diary_screen") }) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "새일기 작성",
@@ -548,13 +553,15 @@ fun DiaryScreen() {
                             modifier = Modifier.padding(bottom = 7.dp)
                         )
                         Divider(
-                            color = Color.Gray, thickness = 1.dp,
+                            color = Color.Gray,
+                            thickness = 1.dp,
                             modifier = Modifier.size(width = 80.dp, height = 1.dp)
                         )
                     }
                 }
             }
-            Icon(painter = painterResource(id = R.drawable.baseline_menu_24),
+            Icon(
+                painter = painterResource(id = R.drawable.baseline_menu_24),
                 contentDescription = "extraMenu",
                 modifier = Modifier
                     .clickable { }
@@ -565,6 +572,7 @@ fun DiaryScreen() {
         }
     }
 }
+
 
 @Composable
 fun ScreenTitle(title: String) {
@@ -578,10 +586,14 @@ fun ScreenTitle(title: String) {
 }
 
 @Composable
-fun WriteDiaryScreen(viewModel: DiaryViewModel) {
+fun WriteDiaryScreen(
+    navController: NavHostController,
+    viewModel: DiaryViewModel,
+    userRegisterViewModel: UserRegisterViewModel
+) {
     var content by remember { mutableStateOf("") }
     val currentDate = SimpleDateFormat("yyyy년 MM월 dd일", Locale.getDefault()).format(Date())
-
+    val currentUser = userRegisterViewModel.currentUser?.userId
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -608,7 +620,7 @@ fun WriteDiaryScreen(viewModel: DiaryViewModel) {
             ) {
                 TextButton(
                     onClick = {
-                        viewModel.insertContent(content)
+
                     }
                 ) {
                     Text(
@@ -620,7 +632,8 @@ fun WriteDiaryScreen(viewModel: DiaryViewModel) {
                 }
                 TextButton(
                     onClick = {
-                        viewModel.insertContent(content)
+                        viewModel.insertContent(content, currentUser!!)
+                        navController.navigate("diary_screen")
                     }
                 ) {
                     Text(
@@ -645,19 +658,18 @@ fun WriteDiaryScreen(viewModel: DiaryViewModel) {
 }
 
 
-/*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MainScreenPreview() {
     DiaryAppTheme {
         val navController = rememberNavController()
         val context = LocalContext.current
-        val userDao = AppDatabase.getDatabase(context).userDao()
-        val contentDao = AppDatabase.getDatabase(context).contentDao()
-        val userRepository = UserRepository(userDao)
-        val contentRepository = ContentRepository(contentDao)
+        val userDao = remember { AppDatabase.getDatabase(context).userDao() }
+        val contentDao = remember { AppDatabase.getDatabase(context).contentDao() }
+        val userRepository = remember { UserRepository(userDao) }
+        val contentRepository = remember { ContentRepository(contentDao) }
         val diaryViewModel: DiaryViewModel = viewModel(
-            factory = DiaryViewModelFactory(userRepository, contentRepository)
+            factory = DiaryViewModelFactory(contentRepository)
         )
         val userRegisterViewModel: UserRegisterViewModel = viewModel(
             factory = UserRegisterViewModelFactory(userRepository)
@@ -672,13 +684,13 @@ fun MainScreenPreview() {
                     MainScreen(navController, userRegisterViewModel)
                 }
                 composable("write_diary_screen") {
-                    WriteDiaryScreen(diaryViewModel)
+                    WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
                 }
                 composable("diary_screen") {
-                    DiaryScreen()
+                    DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
                 }
                 composable("user_register_screen") {
-                    UserRegisterScreen(navController, userRegisterViewModel, diaryViewModel)
+                    UserRegisterScreen(navController, userRegisterViewModel)
                 }
                 composable("password_reset_screen") {
                     PasswordResetScreen(navController, userRegisterViewModel)
@@ -686,24 +698,29 @@ fun MainScreenPreview() {
             }
         }
     }
+}
 
 
+/*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ContentPreview() {
     DiaryAppTheme {
+        val navController = rememberNavController()
         val context = LocalContext.current
         val userDao = AppDatabase.getDatabase(context).userDao()
         val contentDao = AppDatabase.getDatabase(context).contentDao()
         val userRepository = UserRepository(userDao)
         val contentRepository = ContentRepository(contentDao)
-        val viewModel: DiaryViewModel = viewModel(
-            factory = DiaryViewModelFactory(userRepository, contentRepository)
+        val diaryViewModel: DiaryViewModel = viewModel(
+            factory = DiaryViewModelFactory(contentRepository)
         )
-        WriteDiaryScreen(viewModel)
+        val userRegisterViewModel: UserRegisterViewModel = viewModel(
+            factory = UserRegisterViewModelFactory(userRepository)
+        )
+        WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
     }
 }
-}*/
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
@@ -716,7 +733,7 @@ fun UserRegisterScreenPreview() {
         val userRepository = UserRepository(userDao)
         val contentRepository = ContentRepository(contentDao)
         val diaryViewModel: DiaryViewModel = viewModel(
-            factory = DiaryViewModelFactory(userRepository, contentRepository)
+            factory = DiaryViewModelFactory(contentRepository)
         )
         val userRegisterViewModel: UserRegisterViewModel = viewModel(
             factory = UserRegisterViewModelFactory(userRepository)
@@ -730,6 +747,7 @@ fun UserRegisterScreenPreview() {
 @Composable
 fun PasswordResetScreenPreview() {
     DiaryAppTheme {
+        val navController = rememberNavController()
         val context = LocalContext.current
         val userDao = AppDatabase.getDatabase(context).userDao()
         val contentDao = AppDatabase.getDatabase(context).contentDao()
@@ -745,12 +763,24 @@ fun PasswordResetScreenPreview() {
     }
 }
 
-
+}*/
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun DiaryScreenPreview() {
+    val navController = rememberNavController()
+    val context = LocalContext.current
+    val userDao = AppDatabase.getDatabase(context).userDao()
+    val contentDao = AppDatabase.getDatabase(context).contentDao()
+    val userRepository = UserRepository(userDao)
+    val contentRepository = ContentRepository(contentDao)
+    val diaryViewModel: DiaryViewModel = viewModel(
+        factory = DiaryViewModelFactory(contentRepository)
+    )
+    val userRegisterViewModel: UserRegisterViewModel = viewModel(
+        factory = UserRegisterViewModelFactory(userRepository)
+    )
     DiaryAppTheme {
-        DiaryScreen()
+        DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
     }
-}*/
-
+}
+*/
