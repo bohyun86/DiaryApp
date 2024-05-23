@@ -25,12 +25,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,8 +45,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -95,7 +101,7 @@ class MainActivity : ComponentActivity() {
                             DiaryScreen()
                         }
                         composable("user_register_screen") {
-                            UserRegisterScreen(navController, userRegisterViewModel, diaryViewModel)
+                            UserRegisterScreen(navController, userRegisterViewModel)
                         }
                         composable("password_reset_screen") {
                             PasswordResetScreen(navController, userRegisterViewModel)
@@ -129,7 +135,7 @@ fun MainScreen(
         TextFieldSample1(stringResource(R.string.id_ko), id) {
             userRegisterViewModel.onIdChange(it)
         }
-        TextFieldSample1(stringResource(R.string.pw_ko), pw) {
+        AsteriskPasswordTextField(stringResource(R.string.pw_ko), pw) {
             userRegisterViewModel.onPwChange(it)
         }
         ButtonSample1(name = "로그인") {
@@ -148,7 +154,10 @@ fun MainScreen(
 }
 
 @Composable
-fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel: UserRegisterViewModel) {
+fun PasswordResetScreen(
+    navController: NavHostController,
+    userRegisterViewModel: UserRegisterViewModel
+) {
     val pw = userRegisterViewModel.pw
     val pw2 = userRegisterViewModel.pw2
     val email = userRegisterViewModel.email
@@ -183,11 +192,11 @@ fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel:
             }
             Text(
                 userRegisterViewModel.errorMessage,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 color = Color.Red,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(10.dp)
+                    .padding(top = 10.dp, start = 40.dp, end = 40.dp)
             )
         }
 
@@ -207,10 +216,10 @@ fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel:
                 modifier = Modifier.fillMaxWidth()
             )
             {
-                TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") {
+                AsteriskPasswordTextField(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") {
                     userRegisterViewModel.onPwChange(it)
                 }
-                TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") {
+                AsteriskPasswordTextField("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") {
                     userRegisterViewModel.onPw2Change(it)
                 }
                 ButtonSample1(name = "확인") {
@@ -219,11 +228,11 @@ fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel:
                 }
                 Text(
                     userRegisterViewModel.errorMessage,
-                    fontSize = 20.sp,
+                    fontSize = 16.sp,
                     color = Color.Red,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(10.dp)
+                        .padding(top = 10.dp, start = 40.dp, end = 40.dp)
                 )
             }
         }
@@ -234,8 +243,7 @@ fun PasswordResetScreen(navController: NavHostController, userRegisterViewModel:
 @Composable
 fun UserRegisterScreen(
     navController: NavHostController,
-    userRegisterViewModel: UserRegisterViewModel,
-    diaryViewModel: DiaryViewModel
+    userRegisterViewModel: UserRegisterViewModel
 ) {
     val id = userRegisterViewModel.id
     val pw = userRegisterViewModel.pw
@@ -265,13 +273,21 @@ fun UserRegisterScreen(
                 .padding(top = 150.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TextFieldSample1(stringResource(R.string.id_ko), id, "(길이 8~15자,  !@#$ 및 영문숫자)") { newId ->
+            TextFieldSample1(
+                stringResource(R.string.id_ko),
+                id,
+                "(길이 8~15자,  !@#$ 및 영문숫자)"
+            ) { newId ->
                 userRegisterViewModel.onIdChange(newId)
             }
-            TextFieldSample1(stringResource(R.string.pw_ko), pw, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw ->
+            AsteriskPasswordTextField(
+                stringResource(R.string.pw_ko),
+                pw,
+                "(길이 6~15자,  !@#$ 및 영문숫자)"
+            ) { newPw ->
                 userRegisterViewModel.onPwChange(newPw)
             }
-            TextFieldSample1("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
+            AsteriskPasswordTextField("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
                 userRegisterViewModel.onPw2Change(newPw2)
             }
             TextFieldSample1("이메일 주소", email) { newEmail ->
@@ -284,11 +300,11 @@ fun UserRegisterScreen(
             }
             Text(
                 userRegisterViewModel.errorMessage,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 color = Color.Red,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(10.dp)
+                    .padding(top = 10.dp, start = 40.dp, end = 40.dp)
             )
         }
     }
@@ -322,6 +338,59 @@ fun TextFieldSample1(
             unfocusedBorderColor = Color.Black,
         ),
         modifier = Modifier.size(280.dp, 60.dp)
+    )
+}
+
+@Composable
+fun asteriskVisualTransformation(): VisualTransformation {
+    return VisualTransformation { text ->
+        val transformedText = AnnotatedString(text.text.map { '*' }.joinToString(""))
+        TransformedText(transformedText, OffsetMapping.Identity)
+    }
+}
+
+@Composable
+fun AsteriskPasswordTextField(
+    label: String,
+    value: String,
+    placeHolder: String = "",
+    onValueChange: (String) -> Unit
+) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = {
+            Text(
+                label,
+                fontStyle = FontStyle.Normal,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        placeholder = {
+            Text(
+                placeHolder,
+                fontSize = 12.sp
+            )
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.Black,
+        ),
+        visualTransformation = if (passwordVisible) VisualTransformation.None else asteriskVisualTransformation(),
+        trailingIcon = {
+            val image = if (passwordVisible)
+                painterResource(id = R.drawable.baseline_visibility_off_24)
+            else
+                painterResource(id = R.drawable.baseline_visibility_24)
+
+            IconButton(onClick = {
+                passwordVisible = !passwordVisible
+            }) {
+                Icon(painter = image, contentDescription = "Toggle Password Visibility")
+            }
+        }
     )
 }
 
@@ -447,8 +516,10 @@ fun DiaryScreen() {
                         }
                         // Divider 추가
                         if (index < entries.size - 1) {
-                            Divider(color = Color.Gray, thickness = 1.dp,
-                                modifier = Modifier.padding(start = 57.dp, end = 16.dp))
+                            Divider(
+                                color = Color.Gray, thickness = 1.dp,
+                                modifier = Modifier.padding(start = 57.dp, end = 16.dp)
+                            )
                         }
                     }
                 }
@@ -574,7 +645,7 @@ fun WriteDiaryScreen(viewModel: DiaryViewModel) {
 }
 
 
-
+/*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MainScreenPreview() {
@@ -615,8 +686,8 @@ fun MainScreenPreview() {
             }
         }
     }
-}
-/*
+
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ContentPreview() {
@@ -632,12 +703,13 @@ fun ContentPreview() {
         WriteDiaryScreen(viewModel)
     }
 }
-
+}*/
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun UserRegisterScreenPreview() {
     DiaryAppTheme {
+        val navController = rememberNavController()
         val context = LocalContext.current
         val userDao = AppDatabase.getDatabase(context).userDao()
         val contentDao = AppDatabase.getDatabase(context).contentDao()
@@ -649,11 +721,11 @@ fun UserRegisterScreenPreview() {
         val userRegisterViewModel: UserRegisterViewModel = viewModel(
             factory = UserRegisterViewModelFactory(userRepository)
         )
-        UserRegisterScreen(userRegisterViewModel, diaryViewModel)
+        UserRegisterScreen(navController, userRegisterViewModel)
     }
 }
 
-
+/*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun PasswordResetScreenPreview() {

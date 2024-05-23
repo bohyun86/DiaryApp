@@ -18,7 +18,7 @@ class UserRegisterViewModel(
     var pw by mutableStateOf("")
     var pw2 by mutableStateOf("")
     var email by mutableStateOf("")
-    var errorMessage by mutableStateOf("")
+    var errorMessage by mutableStateOf("아이디는 8자 이상 15자 이하, !@#\$ 특수문자를 포함한 문자숫자만 가능합니다.")
     var currentUser = User(id, pw, email)
 
     fun onIdChange(newId: String) {
