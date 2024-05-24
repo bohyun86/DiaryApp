@@ -9,17 +9,12 @@ class UserRepository(private val userDao: UserDao) {
         userDao.updateUser(user)
     }
 
-    suspend fun getUserById(userId: String): User? {
-        return userDao.getUserById(userId)
-    }
-
     suspend fun getUserByEmail(userEmail: String): User? {
         return userDao.getUserByEmail(userEmail)
     }
 
-    suspend fun login(userId: String, userPw: String): Boolean {
-        val user = userDao.getUserById(userId)
-        return user != null && user.userPw == userPw
+    suspend fun login(userId: String): User? {
+        return userDao.getUserById(userId)
     }
 }
 

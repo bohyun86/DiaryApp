@@ -1,5 +1,6 @@
 package com.example.diaryapp
 
+import android.graphics.Color
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,7 +19,8 @@ class UserRegisterViewModel(
     var pw2 by mutableStateOf("")
     var email by mutableStateOf("")
     var errorMessage by mutableStateOf("")
-    var currentUser: User? = null
+    var passwordErrorMsg by mutableStateOf("")
+    var currentUser: User? by mutableStateOf(null)
 
     fun onIdChange(newId: String) {
         id = newId
@@ -38,7 +40,8 @@ class UserRegisterViewModel(
 
     fun login(userId: String, userPw: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = userRepository.login(userId, userPw)
+            currentUser = userRepository.login(userId)
+            val result = (currentUser != null && currentUser!!.userPw == userPw)
             onResult(result)
             if (!result) {
                 errorMessage = when {
@@ -47,6 +50,14 @@ class UserRegisterViewModel(
                     else -> "아이디 또는 비밀번호가 올바르지 않습니다."
                 }
             }
+        }
+    }
+
+    fun changeColor(isTure: Boolean): Int {
+        return if (isTure) {
+            Color.GRAY
+        } else {
+            Color.WHITE
         }
     }
 
@@ -75,12 +86,24 @@ class UserRegisterViewModel(
             viewModelScope.launch {
                 try {
                     val newUser = User(id, pw, email)
+                    if (userRepository.login(id) is User) {
+                        throw Exception("아이디가 이미 존재합니다.")
+                    }
+                    if (userRepository.getUserByEmail(email) is User) {
+                        throw Exception("이미 등록된 이메일입니다.")
+                    }
                     userRepository.insertUser(newUser)
                     currentUser = newUser
+                    errorMessage = ""
+                    id = ""
+                    pw = ""
+                    pw2 = ""
+                    email = ""
                     onResult(true)
                     Log.d("registerUser", "User registration successful")
                 } catch (e: Exception) {
                     Log.e("registerUser", "Error during user registration: ${e.message}")
+                    errorMessage = e.message ?: "Unknown error"
                     onResult(false)
                 }
             }
@@ -92,7 +115,6 @@ class UserRegisterViewModel(
                 !pwEqualPw2() -> errorMessage = "비밀번호가 일치하지 않습니다.\n"
                 !validateEmail() -> errorMessage = "이메일 형식이 올바르지 않습니다.\n"
             }
-            onResult(false)
         }
     }
 
@@ -102,15 +124,18 @@ class UserRegisterViewModel(
                 currentUser?.let {
                     userRepository.updateUser(it)
                     onResult(true)
+                    passwordErrorMsg = ""
+                    pw = ""
+                    pw2 = ""
                 } ?: run {
                     onResult(false)
                 }
             }
         } else {
-            errorMessage = ""
+            passwordErrorMsg = ""
             when {
-                !validatePw() -> errorMessage += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
-                !pwEqualPw2() -> errorMessage += "비밀번호가 일치하지 않습니다.\n"
+                !validatePw() -> passwordErrorMsg += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !pwEqualPw2() -> passwordErrorMsg += "비밀번호가 일치하지 않습니다.\n"
             }
             onResult(false)
         }

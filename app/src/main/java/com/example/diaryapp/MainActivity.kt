@@ -170,7 +170,7 @@ fun PasswordResetScreen(
     val pw = userRegisterViewModel.pw
     val pw2 = userRegisterViewModel.pw2
     val email = userRegisterViewModel.email
-    val isValid = remember { mutableStateOf(true) }
+    val isValid = remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Row(
@@ -183,7 +183,13 @@ fun PasswordResetScreen(
                 painter = painterResource(R.drawable.baseline_arrow_back_24),
                 contentDescription = "back",
                 modifier = Modifier
-                    .clickable { navController.navigateUp() }
+                    .clickable {
+                        navController.navigateUp()
+                        userRegisterViewModel.onIdChange("")
+                        userRegisterViewModel.onPwChange("")
+                        userRegisterViewModel.onPw2Change("")
+                        userRegisterViewModel.onEmailChange("")
+                    }
                     .padding(end = 32.dp)
                     .size(32.dp)
             )
@@ -193,7 +199,13 @@ fun PasswordResetScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            TextFieldSample1("이메일 주소", email, "(등록하신 이메일 주소를 입력해주세요.)") {
+            TextFieldSample2(
+                "이메일 주소",
+                email,
+                "(등록하신 이메일 주소를 입력해주세요.)",
+                isValid.value,
+                userRegisterViewModel
+            ) {
                 userRegisterViewModel.onEmailChange(it)
             }
             ButtonSample1(name = "확인") {
@@ -240,11 +252,15 @@ fun PasswordResetScreen(
                     userRegisterViewModel.updateUser {
                         if (it) {
                             navController.navigate("main_screen")
+                            userRegisterViewModel.onIdChange("")
+                            userRegisterViewModel.onPwChange("")
+                            userRegisterViewModel.onPw2Change("")
+                            userRegisterViewModel.onEmailChange("")
                         }
                     }
                 }
                 Text(
-                    userRegisterViewModel.errorMessage,
+                    userRegisterViewModel.passwordErrorMsg,
                     fontSize = 16.sp,
                     color = Color.Red,
                     modifier = Modifier
@@ -278,7 +294,13 @@ fun UserRegisterScreen(
                 painter = painterResource(R.drawable.baseline_arrow_back_24),
                 contentDescription = "back",
                 modifier = Modifier
-                    .clickable { navController.navigateUp() }
+                    .clickable {
+                        navController.navigate("main_screen")
+                        userRegisterViewModel.onIdChange("")
+                        userRegisterViewModel.onPwChange("")
+                        userRegisterViewModel.onPw2Change("")
+                        userRegisterViewModel.onEmailChange("")
+                    }
                     .padding(end = 32.dp)
                     .size(32.dp)
             )
@@ -311,7 +333,7 @@ fun UserRegisterScreen(
                 userRegisterViewModel.onEmailChange(newEmail)
             }
             ButtonSample1(name = "사용자 등록") {
-                userRegisterViewModel.registerUser{
+                userRegisterViewModel.registerUser {
                     if (it) {
                         navController.navigate("Main_screen")
                     }
@@ -334,29 +356,68 @@ fun TextFieldSample1(
     labelName: String,
     value: String,
     placeHolder: String = "",
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = {
             Text(
-                labelName,
+                text = labelName,
                 fontStyle = FontStyle.Normal,
                 fontWeight = FontWeight.Bold
             )
         },
         placeholder = {
             Text(
-                placeHolder,
+                text = placeHolder,
                 fontSize = 12.sp
             )
         },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color.Black,
-            unfocusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.Black
         ),
-        modifier = Modifier.size(280.dp, 60.dp)
+        modifier = Modifier
+            .size(280.dp, 60.dp)
+    )
+}
+
+@Composable
+fun TextFieldSample2(
+    labelName: String,
+    value: String,
+    placeHolder: String = "",
+    readOnly: Boolean = false,
+    userRegisterViewModel: UserRegisterViewModel = viewModel(),
+    onValueChange: (String) -> Unit
+
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = {
+            Text(
+                text = labelName,
+                fontStyle = FontStyle.Normal,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        placeholder = {
+            Text(
+                text = placeHolder,
+                fontSize = 12.sp
+            )
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.Black
+        ),
+        modifier = Modifier
+            .size(280.dp, 60.dp)
+            .background(Color(userRegisterViewModel.changeColor(readOnly))),
+        enabled = !readOnly,
+        singleLine = true
     )
 }
 
@@ -459,7 +520,6 @@ fun DiaryScreen(
 
     var contents by remember { mutableStateOf(emptyList<Content>()) }
 
-    // Load contents when the screen is first composed
     LaunchedEffect(Unit) {
         diaryViewModel.getContentsByUserId(userId)
         diaryViewModel.contents.collect { newContents ->
