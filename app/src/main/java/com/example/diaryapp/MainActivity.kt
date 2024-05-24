@@ -514,6 +514,17 @@ fun ButtonSample2(name: String, onClick: () -> Unit) {
 }
 
 
+@Composable
+fun ScreenTitle(title: String) {
+    Text(
+        text = title,
+        modifier = Modifier.padding(16.dp),
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        textDecoration = TextDecoration.Underline
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiaryScreen(
@@ -532,7 +543,7 @@ fun DiaryScreen(
         }
     }
 
-    val filteredList = contents.filter { it.userId == userId }.reversed()
+    val filteredList = contents.filter { it.userId == userId }.sortedByDescending { it.contentDate }
     val groupedByMonth = filteredList.groupBy { it.contentDate.substring(0, 7) }
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -605,7 +616,7 @@ fun DiaryScreen(
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                    offset = DpOffset(240.dp, 0.dp), // 메뉴 외부를 클릭하면 닫히도록 합니다
+                    offset = DpOffset(240.dp, 0.dp),
                 ) {
                     DropdownMenuItem(
                         text = { Text("로그아웃",
@@ -661,16 +672,7 @@ fun DiaryScreen(
 }
 
 
-@Composable
-fun ScreenTitle(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(16.dp),
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        textDecoration = TextDecoration.Underline
-    )
-}
+
 
 @Composable
 fun ContentScreen(
@@ -687,7 +689,6 @@ fun ContentScreen(
 
     val context = LocalContext.current
 
-    // DatePickerDialog를 remember 하지 않고 클릭할 때마다 생성하도록 함
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
@@ -790,8 +791,6 @@ fun ContentScreen(
     }
 }
 
-
-
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MainScreenPreview() {
@@ -835,26 +834,6 @@ fun MainScreenPreview() {
 }
 
 
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun ContentPreview() {
-    DiaryAppTheme {
-        val navController = rememberNavController()
-        val context = LocalContext.current
-        val userDao = AppDatabase.getDatabase(context).userDao()
-        val contentDao = AppDatabase.getDatabase(context).contentDao()
-        val userRepository = UserRepository(userDao)
-        val contentRepository = ContentRepository(contentDao)
-        val diaryViewModel: DiaryViewModel = viewModel(
-            factory = DiaryViewModelFactory(contentRepository)
-        )
-        val userRegisterViewModel: UserRegisterViewModel = viewModel(
-            factory = UserRegisterViewModelFactory(userRepository)
-        )
-        ContentScreen(navController, diaryViewModel, userRegisterViewModel)
-    }
-}
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
@@ -914,5 +893,25 @@ fun DiaryScreenPreview() {
     )
     DiaryAppTheme {
         DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun ContentPreview() {
+    DiaryAppTheme {
+        val navController = rememberNavController()
+        val context = LocalContext.current
+        val userDao = AppDatabase.getDatabase(context).userDao()
+        val contentDao = AppDatabase.getDatabase(context).contentDao()
+        val userRepository = UserRepository(userDao)
+        val contentRepository = ContentRepository(contentDao)
+        val diaryViewModel: DiaryViewModel = viewModel(
+            factory = DiaryViewModelFactory(contentRepository)
+        )
+        val userRegisterViewModel: UserRegisterViewModel = viewModel(
+            factory = UserRegisterViewModelFactory(userRepository)
+        )
+        ContentScreen(navController, diaryViewModel, userRegisterViewModel)
     }
 }
