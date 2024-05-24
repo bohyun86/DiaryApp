@@ -1,5 +1,6 @@
 package com.example.diaryapp
 
+import android.app.DatePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -65,6 +66,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.diaryapp.ui.theme.DiaryAppTheme
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -519,7 +521,7 @@ fun DiaryScreen(
     userRegisterViewModel: UserRegisterViewModel,
     diaryViewModel: DiaryViewModel
 ) {
-    val userId = remember { userRegisterViewModel.id }
+    val userId = remember { userRegisterViewModel.currentUser?.userId ?: userRegisterViewModel.id }
 
     var contents by remember { mutableStateOf(emptyList<Content>()) }
 
@@ -677,9 +679,27 @@ fun ContentScreen(
     userRegisterViewModel: UserRegisterViewModel
 ) {
     var content by remember { mutableStateOf("") }
-    val currentDate = SimpleDateFormat("yyyy년 MM월 dd일", Locale.getDefault()).format(Date())
     val currentUser = userRegisterViewModel.currentUser?.userId
     var menuExpanded by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf(Date()) }
+    val dateFormatter = SimpleDateFormat("yyyy년 MM월 dd일", Locale.getDefault())
+    val currentDate = dateFormatter.format(selectedDate)
+
+    val context = LocalContext.current
+
+    // DatePickerDialog를 remember 하지 않고 클릭할 때마다 생성하도록 함
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val calendar = Calendar.getInstance()
+            calendar.set(year, month, dayOfMonth)
+            selectedDate = calendar.time
+        },
+        selectedDate.year + 1900,
+        selectedDate.month,
+        selectedDate.date
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -689,7 +709,8 @@ fun ContentScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(color = MaterialTheme.colorScheme.primary),
+                .background(color = MaterialTheme.colorScheme.primary)
+                .clickable { datePickerDialog.show() }, // Row를 클릭하면 DatePickerDialog를 표시
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -707,7 +728,7 @@ fun ContentScreen(
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                    offset = DpOffset(0.dp, 0.dp), // 메뉴 외부를 클릭하면 닫히도록 합니다
+                    offset = DpOffset(0.dp, 0.dp)
                 ) {
                     DropdownMenuItem(
                         text = {
@@ -743,7 +764,8 @@ fun ContentScreen(
                 }
                 TextButton(
                     onClick = {
-                        viewModel.insertContent(content, currentUser!!)
+                        val formattedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate)
+                        viewModel.insertContent(formattedDate, content, currentUser!!)
                         navController.navigate("diary_screen")
                     }
                 ) {
@@ -767,6 +789,7 @@ fun ContentScreen(
         )
     }
 }
+
 
 
 @Preview(showBackground = true, showSystemUi = true)

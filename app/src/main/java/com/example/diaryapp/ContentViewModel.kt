@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 class DiaryViewModel(
     private val contentRepository: ContentRepository
@@ -23,16 +26,15 @@ class DiaryViewModel(
         }
     }
 
-    fun insertContent(contentDetail: String, userId: String) {
+    fun insertContent(contentDate: String, contentDetail: String, userId: String) {
         viewModelScope.launch {
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            val content = Content(
+            currentContent.value = Content(
                 contentId = 0,
-                contentDate = LocalDate.now().format(formatter),
+                contentDate = contentDate,
                 contentDetail = contentDetail,
                 userId = userId
             )
-            contentRepository.insertContent(content)
+            contentRepository.insertContent(currentContent.value!!)
             getContentsByUserId(userId)
         }
     }
@@ -41,6 +43,18 @@ class DiaryViewModel(
         viewModelScope.launch {
             currentContent.value?.let { contentRepository.deleteContent(it.contentId) }
         }
+    }
+
+    fun changeDateFormat(dateString: String): String {
+        // 입력 형식 지정
+        val inputFormat = SimpleDateFormat("yyyy년 MM월 dd일", Locale.getDefault())
+        // 출력 형식 지정
+        val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+        // 입력 문자열을 Date 객체로 변환
+        val date: Date? = inputFormat.parse(dateString)
+        // Date 객체를 출력 형식의 문자열로 변환
+        return outputFormat.format(date)
     }
 }
 
