@@ -17,6 +17,11 @@ class ContentRepository(private val contentDao: ContentDao) {
         contentDao.updateContent(content)
     }
 
+    suspend fun deleteContent(contentId: Int) {
+        contentDao.deleteContent(contentId)
+    }
+
+
     suspend fun getContentByIdAndUserId(userId: String, contentId: Int): Content {
         return contentDao.getContentsByUserIdAndContentId(userId, contentId)
     }

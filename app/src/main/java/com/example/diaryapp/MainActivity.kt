@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +55,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -93,7 +96,7 @@ class MainActivity : ComponentActivity() {
                             MainScreen(navController, userRegisterViewModel)
                         }
                         composable("write_diary_screen") {
-                            WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
+                            ContentScreen(navController, diaryViewModel, userRegisterViewModel)
                         }
                         composable("diary_screen") {
                             DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
@@ -529,6 +532,7 @@ fun DiaryScreen(
 
     val filteredList = contents.filter { it.userId == userId }.reversed()
     val groupedByMonth = filteredList.groupBy { it.contentDate.substring(0, 7) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Column {
         LazyColumn(
@@ -596,6 +600,27 @@ fun DiaryScreen(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    offset = DpOffset(240.dp, 0.dp), // 메뉴 외부를 클릭하면 닫히도록 합니다
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("로그아웃",
+                            fontWeight = FontWeight.Bold,) },
+                        onClick = {
+                            userRegisterViewModel.logout()
+                            navController.navigate("main_screen")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_logout_24),
+                                contentDescription = "logout",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                }
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_add_circle_24),
                     contentDescription = "addContent",
@@ -624,7 +649,7 @@ fun DiaryScreen(
                 painter = painterResource(id = R.drawable.baseline_menu_24),
                 contentDescription = "extraMenu",
                 modifier = Modifier
-                    .clickable { }
+                    .clickable { menuExpanded = !menuExpanded }
                     .size(48.dp)
                     .align(Alignment.BottomEnd),
                 tint = MaterialTheme.colorScheme.primary
@@ -646,7 +671,7 @@ fun ScreenTitle(title: String) {
 }
 
 @Composable
-fun WriteDiaryScreen(
+fun ContentScreen(
     navController: NavHostController,
     viewModel: DiaryViewModel,
     userRegisterViewModel: UserRegisterViewModel
@@ -654,6 +679,7 @@ fun WriteDiaryScreen(
     var content by remember { mutableStateOf("") }
     val currentDate = SimpleDateFormat("yyyy년 MM월 dd일", Locale.getDefault()).format(Date())
     val currentUser = userRegisterViewModel.currentUser?.userId
+    var menuExpanded by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -678,9 +704,34 @@ fun WriteDiaryScreen(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    offset = DpOffset(0.dp, 0.dp), // 메뉴 외부를 클릭하면 닫히도록 합니다
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                "삭제",
+                                fontWeight = FontWeight.Bold,
+                            )
+                        },
+                        onClick = {
+                            viewModel.deleteContent()
+                            navController.navigate("diary_screen")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_delete_24),
+                                contentDescription = "delete",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                }
                 TextButton(
                     onClick = {
-
+                        menuExpanded = !menuExpanded
                     }
                 ) {
                     Text(
@@ -744,7 +795,7 @@ fun MainScreenPreview() {
                     MainScreen(navController, userRegisterViewModel)
                 }
                 composable("write_diary_screen") {
-                    WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
+                    ContentScreen(navController, diaryViewModel, userRegisterViewModel)
                 }
                 composable("diary_screen") {
                     DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
@@ -761,7 +812,7 @@ fun MainScreenPreview() {
 }
 
 
-/*
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ContentPreview() {
@@ -778,7 +829,7 @@ fun ContentPreview() {
         val userRegisterViewModel: UserRegisterViewModel = viewModel(
             factory = UserRegisterViewModelFactory(userRepository)
         )
-        WriteDiaryScreen(navController, diaryViewModel, userRegisterViewModel)
+        ContentScreen(navController, diaryViewModel, userRegisterViewModel)
     }
 }
 
@@ -802,7 +853,7 @@ fun UserRegisterScreenPreview() {
     }
 }
 
-/*
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun PasswordResetScreenPreview() {
@@ -814,16 +865,15 @@ fun PasswordResetScreenPreview() {
         val userRepository = UserRepository(userDao)
         val contentRepository = ContentRepository(contentDao)
         val diaryViewModel: DiaryViewModel = viewModel(
-            factory = DiaryViewModelFactory(userRepository, contentRepository)
+            factory = DiaryViewModelFactory(contentRepository)
         )
         val userRegisterViewModel: UserRegisterViewModel = viewModel(
             factory = UserRegisterViewModelFactory(userRepository)
         )
-        PasswordResetScreen(userRegisterViewModel)
+        PasswordResetScreen(navController, userRegisterViewModel)
     }
 }
 
-}*/
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun DiaryScreenPreview() {
@@ -843,4 +893,3 @@ fun DiaryScreenPreview() {
         DiaryScreen(navController, userRegisterViewModel, diaryViewModel)
     }
 }
-*/

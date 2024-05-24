@@ -42,6 +42,9 @@ class UserRegisterViewModel(
         viewModelScope.launch {
             currentUser = userRepository.login(userId)
             val result = (currentUser != null && currentUser!!.userPw == userPw)
+            errorMessage = ""
+            id = ""
+            pw = ""
             onResult(result)
             if (!result) {
                 errorMessage = when {
@@ -51,6 +54,10 @@ class UserRegisterViewModel(
                 }
             }
         }
+    }
+
+    fun logout() {
+        currentUser = null
     }
 
     fun changeColor(isTure: Boolean): Int {

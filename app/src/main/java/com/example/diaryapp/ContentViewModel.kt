@@ -14,6 +14,7 @@ class DiaryViewModel(
 ) : ViewModel() {
     private val _contents = MutableStateFlow<List<Content>>(emptyList())
     val contents: StateFlow<List<Content>> get() = _contents
+    val currentContent = MutableStateFlow<Content?>(null)
 
     fun getContentsByUserId(userId: String) {
         viewModelScope.launch {
@@ -33,6 +34,12 @@ class DiaryViewModel(
             )
             contentRepository.insertContent(content)
             getContentsByUserId(userId)
+        }
+    }
+
+    fun deleteContent() {
+        viewModelScope.launch {
+            currentContent.value?.let { contentRepository.deleteContent(it.contentId) }
         }
     }
 }
