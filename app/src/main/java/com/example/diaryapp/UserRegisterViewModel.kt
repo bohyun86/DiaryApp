@@ -30,6 +30,10 @@ class UserRegisterViewModel(
         pw = newPw
     }
 
+    fun onErrorMessageChange(errorMSG: String) {
+        errorMessage = errorMSG
+    }
+
     fun onPw2Change(newPw2: String) {
         pw2 = newPw2
     }
@@ -117,8 +121,8 @@ class UserRegisterViewModel(
         } else {
             errorMessage = ""
             when {
-                !validateId() -> errorMessage = "아이디는 8자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
-                !validatePw() -> errorMessage = "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !validateId() -> errorMessage = "아이디는 8자 이상 15자 이하, 특수문자(!@#\$) 및 문자숫자만 가능합니다.\n"
+                !validatePw() -> errorMessage = "비밀번호는 6자 이상 15자 이하, 특수문자(!@#\$) 및 문자숫자만 가능합니다.\n"
                 !pwEqualPw2() -> errorMessage = "비밀번호가 일치하지 않습니다.\n"
                 !validateEmail() -> errorMessage = "이메일 형식이 올바르지 않습니다.\n"
             }
@@ -141,7 +145,7 @@ class UserRegisterViewModel(
         } else {
             passwordErrorMsg = ""
             when {
-                !validatePw() -> passwordErrorMsg += "비밀번호는 6자 이상 15자 이하, !@#$ 특수문자를 포함한 문자숫자만 가능합니다.\n"
+                !validatePw() -> passwordErrorMsg += "비밀번호는 6자 이상 15자 이하, 특수문자(!@#\$) 및 문자숫자만 가능합니다.\n"
                 !pwEqualPw2() -> passwordErrorMsg += "비밀번호가 일치하지 않습니다.\n"
             }
             onResult(false)

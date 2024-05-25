@@ -162,9 +162,15 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(10.dp))
         ButtonSample2(name = stringResource(R.string.userEnroll)) {
             navController.navigate("user_register_screen")
+            userRegisterViewModel.onErrorMessageChange("")
+            userRegisterViewModel.onIdChange("")
+            userRegisterViewModel.onPwChange("")
         }
         ButtonSample2(name = stringResource(R.string.pwInitialize)) {
             navController.navigate("password_reset_screen")
+            userRegisterViewModel.onErrorMessageChange("")
+            userRegisterViewModel.onIdChange("")
+            userRegisterViewModel.onPwChange("")
         }
         Text(
             userRegisterViewModel.errorMessage,
@@ -176,6 +182,86 @@ fun MainScreen(
         )
     }
 }
+
+@Composable
+fun UserRegisterScreen(
+    navController: NavHostController,
+    userRegisterViewModel: UserRegisterViewModel
+) {
+    val id = userRegisterViewModel.id
+    val pw = userRegisterViewModel.pw
+    val pw2 = userRegisterViewModel.pw2
+    val email = userRegisterViewModel.email
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ScreenTitle(title = "사용자 등록")
+            Icon(
+                painter = painterResource(R.drawable.baseline_arrow_back_24),
+                contentDescription = "back",
+                modifier = Modifier
+                    .clickable {
+                        navController.navigate("main_screen")
+                        userRegisterViewModel.errorMessage = ""
+                        userRegisterViewModel.onIdChange("")
+                        userRegisterViewModel.onPwChange("")
+                        userRegisterViewModel.onPw2Change("")
+                        userRegisterViewModel.onEmailChange("")
+                    }
+                    .padding(end = 32.dp)
+                    .size(32.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 150.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            TextFieldSample1(
+                stringResource(R.string.id_ko),
+                id,
+                "(길이 8~15자,  !@#$ 및 영문숫자)"
+            ) { newId ->
+                userRegisterViewModel.onIdChange(newId)
+            }
+            AsteriskPasswordTextField(
+                stringResource(R.string.pw_ko),
+                pw,
+                "(길이 6~15자,  !@#$ 및 영문숫자)"
+            ) { newPw ->
+                userRegisterViewModel.onPwChange(newPw)
+            }
+            AsteriskPasswordTextField("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
+                userRegisterViewModel.onPw2Change(newPw2)
+            }
+            TextFieldSample1("이메일 주소", email) { newEmail ->
+                userRegisterViewModel.onEmailChange(newEmail)
+            }
+            ButtonSample1(name = "사용자 등록") {
+                userRegisterViewModel.registerUser {
+                    if (it) {
+                        navController.navigate("Main_screen")
+                    }
+                }
+            }
+            Text(
+                userRegisterViewModel.errorMessage,
+                fontSize = 16.sp,
+                color = Color.Red,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 10.dp, start = 40.dp, end = 40.dp)
+            )
+        }
+    }
+}
+
 
 @Composable
 fun PasswordResetScreen(
@@ -200,6 +286,7 @@ fun PasswordResetScreen(
                 modifier = Modifier
                     .clickable {
                         navController.navigateUp()
+                        userRegisterViewModel.errorMessage = ""
                         userRegisterViewModel.onIdChange("")
                         userRegisterViewModel.onPwChange("")
                         userRegisterViewModel.onPw2Change("")
@@ -283,85 +370,6 @@ fun PasswordResetScreen(
                         .padding(top = 10.dp, start = 40.dp, end = 40.dp)
                 )
             }
-        }
-    }
-}
-
-
-@Composable
-fun UserRegisterScreen(
-    navController: NavHostController,
-    userRegisterViewModel: UserRegisterViewModel
-) {
-    val id = userRegisterViewModel.id
-    val pw = userRegisterViewModel.pw
-    val pw2 = userRegisterViewModel.pw2
-    val email = userRegisterViewModel.email
-
-    Column(modifier = Modifier.padding(16.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ScreenTitle(title = "사용자 등록")
-            Icon(
-                painter = painterResource(R.drawable.baseline_arrow_back_24),
-                contentDescription = "back",
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate("main_screen")
-                        userRegisterViewModel.onIdChange("")
-                        userRegisterViewModel.onPwChange("")
-                        userRegisterViewModel.onPw2Change("")
-                        userRegisterViewModel.onEmailChange("")
-                    }
-                    .padding(end = 32.dp)
-                    .size(32.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 150.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TextFieldSample1(
-                stringResource(R.string.id_ko),
-                id,
-                "(길이 8~15자,  !@#$ 및 영문숫자)"
-            ) { newId ->
-                userRegisterViewModel.onIdChange(newId)
-            }
-            AsteriskPasswordTextField(
-                stringResource(R.string.pw_ko),
-                pw,
-                "(길이 6~15자,  !@#$ 및 영문숫자)"
-            ) { newPw ->
-                userRegisterViewModel.onPwChange(newPw)
-            }
-            AsteriskPasswordTextField("비밀번호 확인", pw2, "(길이 6~15자,  !@#$ 및 영문숫자)") { newPw2 ->
-                userRegisterViewModel.onPw2Change(newPw2)
-            }
-            TextFieldSample1("이메일 주소", email) { newEmail ->
-                userRegisterViewModel.onEmailChange(newEmail)
-            }
-            ButtonSample1(name = "사용자 등록") {
-                userRegisterViewModel.registerUser {
-                    if (it) {
-                        navController.navigate("Main_screen")
-                    }
-                }
-            }
-            Text(
-                userRegisterViewModel.errorMessage,
-                fontSize = 16.sp,
-                color = Color.Red,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 10.dp, start = 40.dp, end = 40.dp)
-            )
         }
     }
 }
