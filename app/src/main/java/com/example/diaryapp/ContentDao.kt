@@ -14,8 +14,8 @@ interface ContentDao {
     @Query("SELECT * FROM content WHERE userId = :userId ORDER BY date DESC")
     suspend fun getContentsByUserId(userId: String): List<Content>
 
-    @Query("SELECT * FROM content WHERE userId = :userId AND contentId = :contentId")
-    suspend fun getContentsByUserIdAndContentId(userId: String, contentId: Int): Content
+    @Query("SELECT * FROM content WHERE contentId = :contentId")
+    suspend fun getContentsByContentId(contentId: Int): Content
 
     @Query("DELETE FROM content WHERE userId = :userId AND contentId = :contentId")
     suspend fun deleteContent(userId: String, contentId: Int)

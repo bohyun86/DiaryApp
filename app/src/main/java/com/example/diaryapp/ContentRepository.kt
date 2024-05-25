@@ -9,6 +9,8 @@ class ContentRepository(private val contentDao: ContentDao) {
         return contentDao.getContentsByUserId(userId)
     }
 
+
+
     suspend fun deleteContent(userId: String, contentId: Int) {
         contentDao.deleteContent(userId, contentId)
     }
@@ -22,7 +24,7 @@ class ContentRepository(private val contentDao: ContentDao) {
     }
 
 
-    suspend fun getContentByIdAndUserId(userId: String, contentId: Int): Content {
-        return contentDao.getContentsByUserIdAndContentId(userId, contentId)
+    suspend fun getContentsById(contentId: Int): Content {
+        return contentDao.getContentsByContentId(contentId)
     }
 }
