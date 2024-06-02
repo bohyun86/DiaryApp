@@ -8,4 +8,9 @@
 5) 컨텐츠 등록, 삭제, 업데이트 구현<br/>
 6) SQLite 활용 데이터베이스 구축<br/>
 </p>
+<h2>2. 주요 사용 언어 및 툴</h2>
+  <p>
+    1) Kotlin<br/>
+    2) Jetpack Compose<br/>
+  </p>
 </body>
