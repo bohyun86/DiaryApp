@@ -10,11 +10,6 @@ class ContentRepository(private val contentDao: ContentDao) {
     }
 
 
-
-    suspend fun deleteContent(userId: String, contentId: Int) {
-        contentDao.deleteContent(userId, contentId)
-    }
-
     suspend fun updateContent(content: Content) {
         contentDao.updateContent(content)
     }

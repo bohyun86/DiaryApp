@@ -6,9 +6,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class ContentViewModel(
     private val contentRepository: ContentRepository
@@ -45,14 +42,16 @@ class ContentViewModel(
 
     fun insertContent(contentDate: String, contentDetail: String, userId: String) {
         viewModelScope.launch {
-            currentContent.value = Content(
-                contentId = 0,
-                contentDate = contentDate,
-                contentDetail = contentDetail,
-                userId = userId
-            )
-            contentRepository.insertContent(currentContent.value!!)
-            getContentsByUserId(userId)
+            if (contentDetail != "") {
+                currentContent.value = Content(
+                    contentId = 0,
+                    contentDate = contentDate,
+                    contentDetail = contentDetail,
+                    userId = userId
+                )
+                contentRepository.insertContent(currentContent.value!!)
+                getContentsByUserId(userId)
+            }
         }
     }
 

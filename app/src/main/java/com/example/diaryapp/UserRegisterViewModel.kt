@@ -47,8 +47,6 @@ class UserRegisterViewModel(
             currentUser = userRepository.login(userId)
             val result = (currentUser != null && currentUser!!.userPw == userPw)
             errorMessage = ""
-            id = ""
-            pw = ""
             onResult(result)
             if (!result) {
                 errorMessage = when {
@@ -62,6 +60,8 @@ class UserRegisterViewModel(
 
     fun logout() {
         currentUser = null
+        id= ""
+        pw = ""
     }
 
     fun changeColor(isTure: Boolean): Int {
@@ -72,12 +72,6 @@ class UserRegisterViewModel(
         }
     }
 
-    fun getUserByUserEmail(userEmail: String, onResult: (User?) -> Unit) {
-        viewModelScope.launch {
-            val user = userRepository.getUserByEmail(userEmail)
-            onResult(user)
-        }
-    }
 
     fun isExitingUserEmail(email: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
@@ -85,6 +79,7 @@ class UserRegisterViewModel(
             val isTrue = user != null
             if (isTrue) {
                 currentUser = user
+                errorMessage = ""
             } else {
                 errorMessage = "등록되지 않은 이메일입니다."
             }
@@ -132,6 +127,7 @@ class UserRegisterViewModel(
     fun updateUser(onResult: (Boolean) -> Unit) {
         if (pwEqualPw2() && validatePw()) {
             viewModelScope.launch {
+                currentUser?.userPw = pw
                 currentUser?.let {
                     userRepository.updateUser(it)
                     onResult(true)
